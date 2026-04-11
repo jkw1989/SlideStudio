@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grid Buddy</title>
+  <title>Slide Studio</title>
   
   <!-- Load Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -274,7 +274,7 @@
           });
 
           const link = document.createElement('a');
-          link.download = `grid-buddy-export.png`;
+          link.download = `slide-studio-export.png`;
           link.href = canvas.toDataURL('image/png');
           link.click();
         } catch (err) {
@@ -349,7 +349,7 @@
 
           {/* Wider Sidebar (400px) */}
           <aside className="w-[400px] bg-white overflow-y-auto p-8 flex flex-col shrink-0 border-l border-gray-200 shadow-2xl z-20">
-            <h1 className="text-3xl font-bold mb-1 tracking-tight">Grid Buddy</h1>
+            <h1 className="text-3xl font-bold mb-1 tracking-tight">Slide Studio</h1>
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">Upload images to create custom masonry grids for your presentation</p>
 
             <GdsSection title="1. Add files">
