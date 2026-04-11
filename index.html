@@ -236,10 +236,20 @@
         if (!captureAreaRef.current || !window.html2canvas) return;
         setIsExporting(true);
         
+        // --- FIX: Temporarily remove the preview scale from the actual DOM ---
+        // html2canvas relies on accurate bounding client rects. When the parent is scaled,
+        // the rect is smaller, leading to cropped/distorted exports depending on window size.
+        const parentElement = captureAreaRef.current.parentElement;
+        const originalTransform = parentElement.style.transform;
+        parentElement.style.transform = 'scale(1)';
+
+        // Wait a brief moment for the DOM to update its bounding boxes before capturing
+        await new Promise(resolve => setTimeout(resolve, 50));
+
         try {
           const canvas = await window.html2canvas(captureAreaRef.current, {
             useCORS: true,
-            scale: 3,
+            scale: 3, // Multiplies the 1280x720 resolution by 3 for a high-quality export
             backgroundColor: bgColor,
             width: 1280,
             height: 720,
@@ -256,6 +266,8 @@
         } catch (err) {
           console.error("Export Error:", err);
         } finally {
+          // Snap the scale back to normal once the capture is complete
+          parentElement.style.transform = originalTransform;
           setIsExporting(false);
         }
       };
