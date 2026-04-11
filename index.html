@@ -117,7 +117,7 @@
     };
 
     const GdsSection = ({ title, children, hasDivider = true, className = "" }) => (
-      <div className={`mb-6 pb-4 ${hasDivider ? 'border-b border-gray-200' : ''} ${className}`}>
+      <div className={`mb-4 pb-3 ${hasDivider ? 'border-b border-gray-200' : ''} ${className}`}>
         <h2 className="text-base font-bold mb-2 uppercase tracking-wide" style={{ color: GDS_COLORS.black }}>{title}</h2>
         {children}
       </div>
@@ -347,10 +347,10 @@
             </div>
           </main>
 
-          {/* Wider Sidebar (400px) */}
-          <aside className="w-[400px] bg-white overflow-y-auto p-8 flex flex-col shrink-0 border-l border-gray-200 shadow-2xl z-20">
+          {/* Wider Sidebar (380px) */}
+          <aside className="w-[380px] bg-white overflow-y-auto p-6 flex flex-col shrink-0 border-l border-gray-200 shadow-2xl z-20">
             <h1 className="text-3xl font-bold mb-1 tracking-tight">Slide Studio</h1>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">Upload images to create custom masonry grids for your presentation</p>
+            <p className="text-xs text-gray-500 mb-3 leading-relaxed">Upload images to create custom masonry grids for your presentation</p>
 
             <GdsSection title="1. Add files">
               <GdsHint>JPG or PNG images.</GdsHint>
@@ -361,32 +361,32 @@
             </GdsSection>
 
             <GdsSection title="2. Grid layout">
-              <div className="grid grid-cols-2 gap-4 mb-3">
+              <div className="grid grid-cols-2 gap-3 mb-2">
                 <div><GdsLabel>Columns</GdsLabel><GdsInput type="number" value={cols} onChange={(e) => setCols(parseInt(e.target.value) || 1)} /></div>
                 <div><GdsLabel>Gap (px)</GdsLabel><GdsInput type="number" value={gap} onChange={(e) => setGap(parseInt(e.target.value) || 0)} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div><GdsLabel>Border radius</GdsLabel><GdsInput type="number" value={radius} onChange={(e) => setRadius(parseInt(e.target.value) || 0)} /></div>
                 <div><GdsLabel>Border weight</GdsLabel><GdsInput type="number" value={borderWeight} onChange={(e) => setBorderWeight(parseInt(e.target.value) || 0)} /></div>
               </div>
             </GdsSection>
 
             <GdsSection title="3. Adjust viewport">
-              <div className="mb-4">
+              <div className="mb-3">
                 <GdsLabel>Format</GdsLabel>
                 <GdsSelect value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
                   <option value="16:9">Landscape (16:9)</option>
                   <option value="9:16">Portrait (9:16)</option>
                 </GdsSelect>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div><GdsLabel>Zoom %</GdsLabel><GdsInput type="number" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value) || 1)} /></div>
                 <div><GdsLabel>Rotation %</GdsLabel><GdsInput type="number" value={rotation} onChange={(e) => setRotation(parseInt(e.target.value) || 0)} /></div>
               </div>
             </GdsSection>
 
             {/* Compact Appearance Section */}
-            <GdsSection title="4. Appearance" hasDivider={false} className="mb-12">
+            <GdsSection title="4. Appearance" hasDivider={false} className="mb-6">
               <div className="space-y-2">
                 <div className="flex justify-between items-center py-1 px-3 border-l-4 border-black" style={{ backgroundColor: GDS_COLORS.grey3 }}>
                   <GdsLabel>Border color</GdsLabel>
@@ -400,7 +400,7 @@
             </GdsSection>
 
             {/* Action Area */}
-            <div className="mt-auto pt-6 border-t border-gray-200">
+            <div className="mt-auto pt-4 border-t border-gray-200">
               <GdsButton 
                 variant="primary" 
                 onClick={handleExport} 
