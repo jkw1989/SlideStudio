@@ -119,13 +119,14 @@
 
       // State
       const [photos, setPhotos] = useState([]); 
-      const [cols, setCols] = useState(3);
-      const [gap, setGap] = useState(10);
-      const [radius, setRadius] = useState(0); 
+      const [cols, setCols] = useState(4);
+      const [gap, setGap] = useState(12);
+      const [radius, setRadius] = useState(6); 
+      const [borderWeight, setBorderWeight] = useState(1);
       const [zoom, setZoom] = useState(130);
       const [rotation, setRotation] = useState(20);
       const [borderColor, setBorderColor] = useState('#4442e3'); 
-      const [bgColor, setBgColor] = useState('#ffffff');
+      const [bgColor, setBgColor] = useState('#ededed');
       const [isExporting, setIsExporting] = useState(false);
       
       // Pan state
@@ -317,7 +318,7 @@
                     <div ref={gridRef} className="grid" style={{ width: `${BASE_WIDTH}px` }}>
                       {photos.map((src, i) => (
                         <div key={i} className="grid-item" style={{ width: `${itemWidth}px`, marginBottom: `${gap}px` }}>
-                          <div className="bg-white" style={{ borderRadius: `${radius}px`, border: `2px solid ${borderColor}`, overflow: 'hidden' }}>
+                          <div className="bg-white" style={{ borderRadius: `${radius}px`, border: `${borderWeight}px solid ${borderColor}`, overflow: 'hidden' }}>
                             <img src={src} alt="" className="w-full block pointer-events-none" />
                           </div>
                         </div>
@@ -336,7 +337,7 @@
           {/* Wider Sidebar (400px) */}
           <aside className="w-[400px] bg-white overflow-y-auto p-8 flex flex-col shrink-0 border-l border-gray-200 shadow-2xl z-20">
             <h1 className="text-3xl font-bold mb-1 tracking-tight">Grid Buddy</h1>
-            <p className="text-xs text-gray-500 mb-8 leading-relaxed">Create custom masonry grids for your presentation</p>
+            <p className="text-xs text-gray-500 mb-4 leading-relaxed">Upload images to create custom masonry grids for your presentation</p>
 
             <GdsSection title="1. Add files">
               <GdsHint>JPG or PNG images.</GdsHint>
@@ -351,8 +352,10 @@
                 <div><GdsLabel>Columns</GdsLabel><GdsInput type="number" value={cols} onChange={(e) => setCols(parseInt(e.target.value) || 1)} /></div>
                 <div><GdsLabel>Gap (px)</GdsLabel><GdsInput type="number" value={gap} onChange={(e) => setGap(parseInt(e.target.value) || 0)} /></div>
               </div>
-              <GdsLabel>Border radius</GdsLabel>
-              <GdsInput type="number" value={radius} onChange={(e) => setRadius(parseInt(e.target.value) || 0)} />
+              <div className="grid grid-cols-2 gap-4">
+                <div><GdsLabel>Border radius</GdsLabel><GdsInput type="number" value={radius} onChange={(e) => setRadius(parseInt(e.target.value) || 0)} /></div>
+                <div><GdsLabel>Border weight</GdsLabel><GdsInput type="number" value={borderWeight} onChange={(e) => setBorderWeight(parseInt(e.target.value) || 0)} /></div>
+              </div>
             </GdsSection>
 
             <GdsSection title="3. Adjust viewport">
@@ -364,7 +367,7 @@
 
             {/* Compact Appearance Section */}
             <GdsSection title="4. Appearance" hasDivider={false} className="mb-12">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div className="flex justify-between items-center py-1 px-3 border-l-4 border-black" style={{ backgroundColor: GDS_COLORS.grey3 }}>
                   <GdsLabel>Border color</GdsLabel>
                   <input type="color" value={borderColor} onChange={(e) => setBorderColor(e.target.value)} className="w-8 h-8 cursor-pointer" />
