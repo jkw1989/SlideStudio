@@ -19,7 +19,6 @@
     /* Custom Slider Styling to match GDS screenshot */
     .gds-slider {
       -webkit-appearance: none;
-      -moz-appearance: none;
       appearance: none;
       width: 100%;
       height: 8px;
@@ -156,19 +155,17 @@
     };
 
     const GdsSlider = ({ label, value, min, max, onChange, className = "" }) => (
-      <div className={`mb-6 ${className}`}>
-        <div className="flex justify-between items-center mb-3">
-          <GdsLabel className="!mb-0">{label}</GdsLabel>
-          <span className="font-bold text-base">{value}</span>
-        </div>
+      <div className={`mb-4 ${className} flex items-center gap-3`}>
+        <GdsLabel className="!mb-0 w-24 shrink-0">{label}</GdsLabel>
         <input 
           type="range" 
           min={min} 
           max={max} 
           value={value} 
           onChange={(e) => onChange(parseInt(e.target.value) || 0)}
-          className="gds-slider"
+          className="gds-slider flex-grow"
         />
+        <span className="font-bold text-base w-10 text-right shrink-0">{value}</span>
       </div>
     );
 
