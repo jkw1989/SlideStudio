@@ -14,6 +14,45 @@
   
   <!-- Load Babel to translate JSX into browser-readable JavaScript -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    /* Custom Slider Styling to match GDS screenshot */
+    .gds-slider {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      background: #b1b4b6;
+      outline: none;
+    }
+
+    /* Chrome, Safari, Edge, Opera */
+    .gds-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      background: #0b0c0c;
+      cursor: pointer;
+      border: none;
+      border-radius: 0;
+    }
+
+    /* Firefox */
+    .gds-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      background: #0b0c0c;
+      cursor: pointer;
+      border: none;
+      border-radius: 0;
+    }
+
+    .gds-slider:focus {
+      box-shadow: 0 0 0 4px #ffdd00;
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>
@@ -60,8 +99,8 @@
     };
 
     // --- GDS UI Components ---
-    const GdsLabel = ({ children }) => (
-      <label className="block text-sm font-bold mb-0.5" style={{ color: GDS_COLORS.black }}>
+    const GdsLabel = ({ children, className = "" }) => (
+      <label className={`block text-sm font-bold mb-0.5 ${className}`} style={{ color: GDS_COLORS.black }}>
         {children}
       </label>
     );
@@ -116,9 +155,26 @@
       );
     };
 
+    const GdsSlider = ({ label, value, min, max, onChange, className = "" }) => (
+      <div className={`mb-6 ${className}`}>
+        <div className="flex justify-between items-center mb-3">
+          <GdsLabel className="!mb-0">{label}</GdsLabel>
+          <span className="font-bold text-base">{value}</span>
+        </div>
+        <input 
+          type="range" 
+          min={min} 
+          max={max} 
+          value={value} 
+          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+          className="gds-slider"
+        />
+      </div>
+    );
+
     const GdsSection = ({ title, children, hasDivider = true, className = "" }) => (
       <div className={`mb-4 pb-3 ${hasDivider ? 'border-b border-gray-200' : ''} ${className}`}>
-        <h2 className="text-base font-bold mb-2 uppercase tracking-wide" style={{ color: GDS_COLORS.black }}>{title}</h2>
+        <h2 className="text-base font-bold mb-4 uppercase tracking-wide" style={{ color: GDS_COLORS.black }}>{title}</h2>
         {children}
       </div>
     );
@@ -218,20 +274,17 @@
         const updateScale = () => {
           if (workspaceRef.current) {
             const { clientWidth, clientHeight } = workspaceRef.current;
-            const padding = 160; // Increased padding to make the frame appear slightly smaller
+            const padding = 160; 
             
-            // Calculate scale to fit the dynamic canvas dimensions
             const scaleX = (clientWidth - padding) / canvasWidth;
             const scaleY = (clientHeight - padding) / canvasHeight;
             const newScale = Math.min(scaleX, scaleY);
             
-            // Cap scale at 1.2x to prevent it getting excessively large on massive monitors
             setPreviewScale(Math.min(newScale, 1.2));
           }
         };
 
         if (libsLoaded) {
-          // Run initially once the UI is actually rendered (slight delay ensures layout is finished)
           setTimeout(updateScale, 50);
         }
         
@@ -250,20 +303,16 @@
         if (!captureAreaRef.current || !window.html2canvas) return;
         setIsExporting(true);
         
-        // --- FIX: Temporarily remove the preview scale from the actual DOM ---
-        // html2canvas relies on accurate bounding client rects. When the parent is scaled,
-        // the rect is smaller, leading to cropped/distorted exports depending on window size.
         const parentElement = captureAreaRef.current.parentElement;
         const originalTransform = parentElement.style.transform;
         parentElement.style.transform = 'scale(1)';
 
-        // Wait a brief moment for the DOM to update its bounding boxes before capturing
         await new Promise(resolve => setTimeout(resolve, 50));
 
         try {
           const canvas = await window.html2canvas(captureAreaRef.current, {
             useCORS: true,
-            scale: 3, // Multiplies the resolution by 3 for a high-quality export
+            scale: 3, 
             backgroundColor: bgColor,
             width: canvasWidth,
             height: canvasHeight,
@@ -280,7 +329,6 @@
         } catch (err) {
           console.error("Export Error:", err);
         } finally {
-          // Snap the scale back to normal once the capture is complete
           parentElement.style.transform = originalTransform;
           setIsExporting(false);
         }
@@ -340,14 +388,14 @@
                   </div>
                 </div>
 
-                {/* Thinner Viewport Guide (2px) */}
+                {/* Viewport Guide */}
                 <div id="bleed-mask-node" className="absolute inset-0 pointer-events-none" style={{ boxShadow: '0 0 0 10000px rgba(230, 230, 230, 0.85)', border: '2px solid #505a5f', zIndex: 50 }}>
                 </div>
               </div>
             </div>
           </main>
 
-          {/* Wider Sidebar (380px) */}
+          {/* Sidebar */}
           <aside className="w-[380px] bg-white overflow-y-auto p-6 flex flex-col shrink-0 border-l border-gray-200 shadow-2xl z-20">
             <h1 className="text-3xl font-bold mb-1 tracking-tight">Slide Studio</h1>
             <p className="text-xs text-gray-500 mb-3 leading-relaxed">Upload images to create custom masonry grids for your presentation</p>
@@ -372,28 +420,40 @@
             </GdsSection>
 
             <GdsSection title="3. Adjust viewport">
-              <div className="mb-3">
+              <div className="mb-6">
                 <GdsLabel>Format</GdsLabel>
                 <GdsSelect value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
                   <option value="16:9">Landscape (16:9)</option>
                   <option value="9:16">Portrait (9:16)</option>
                 </GdsSelect>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><GdsLabel>Zoom %</GdsLabel><GdsInput type="number" value={zoom} onChange={(e) => setZoom(parseInt(e.target.value) || 1)} /></div>
-                <div><GdsLabel>Rotation %</GdsLabel><GdsInput type="number" value={rotation} onChange={(e) => setRotation(parseInt(e.target.value) || 0)} /></div>
-              </div>
+              
+              <GdsSlider 
+                label="Zoom %" 
+                value={zoom} 
+                min={10} 
+                max={400} 
+                onChange={setZoom} 
+              />
+              
+              <GdsSlider 
+                label="Rotation °" 
+                value={rotation} 
+                min={-180} 
+                max={180} 
+                onChange={setRotation} 
+              />
             </GdsSection>
 
-            {/* Compact Appearance Section */}
+            {/* Appearance Section */}
             <GdsSection title="4. Appearance" hasDivider={false} className="mb-6">
               <div className="space-y-2">
                 <div className="flex justify-between items-center py-1 px-3 border-l-4 border-black" style={{ backgroundColor: GDS_COLORS.grey3 }}>
-                  <GdsLabel>Border color</GdsLabel>
+                  <GdsLabel className="!mb-0">Border color</GdsLabel>
                   <input type="color" value={borderColor} onChange={(e) => setBorderColor(e.target.value)} className="w-8 h-8 cursor-pointer" />
                 </div>
                 <div className="flex justify-between items-center py-1 px-3 border-l-4 border-black" style={{ backgroundColor: GDS_COLORS.grey3 }}>
-                  <GdsLabel>Canvas background</GdsLabel>
+                  <GdsLabel className="!mb-0">Canvas background</GdsLabel>
                   <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="w-8 h-8 cursor-pointer" />
                 </div>
               </div>
