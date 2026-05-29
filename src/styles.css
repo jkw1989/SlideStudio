@@ -181,7 +181,7 @@
         overflow-y: auto;
         overflow-x: hidden;
         padding: 1rem 1.5rem;
-        padding-bottom: 120px;
+        padding-bottom: 1.5rem;
         display: flex;
         flex-direction: column;
         flex-shrink: 0;
