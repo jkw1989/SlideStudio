@@ -60,8 +60,8 @@ export const Slider = ({
     onChange,
     className = "",
 }) => (
-    <div className={`mb-2 ${className} flex items-center gap-3`}>
-        <Label className="!mb-0 w-24 shrink-0">{label}</Label>
+    <div className={`mb-2 ${className} flex items-center gap-2`}>
+        <Label className="!mb-0 w-20 shrink-0">{label}</Label>
         <input
             type="range"
             min={min}
@@ -70,7 +70,7 @@ export const Slider = ({
             onChange={(e) => onChange(parseInt(e.target.value) || 0)}
             className="brutalist-slider flex-grow"
         />
-        <span className="font-bold text-[13px] w-10 text-right shrink-0 font-mono text-ink">
+        <span className="font-bold text-[13px] w-6 text-right shrink-0 font-mono text-ink">
             {value}
         </span>
     </div>

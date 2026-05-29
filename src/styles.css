@@ -31,7 +31,7 @@
         -webkit-appearance: none;
         appearance: none;
         width: 100%;
-        height: 6px;
+        height: 10px;
         background: var(--line);
         outline: none;
         border: 1px solid var(--ink);
