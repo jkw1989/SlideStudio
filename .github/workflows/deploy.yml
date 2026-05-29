@@ -9,6 +9,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
@@ -21,8 +23,16 @@ jobs:
             - name: Build
               run: npm run build
 
-            - name: Deploy
-              uses: JamesIves/github-pages-deploy-action@v4
-              with:
-                  branch: gh-pages
-                  folder: dist
+            - name: Configure Git
+              run: |
+                  git config user.name "GitHub Actions"
+                  git config user.email "actions@github.com"
+
+            - name: Deploy to gh-pages
+              run: |
+                  git checkout --orphan gh-pages
+                  git rm -rf .
+                  cp -r dist/* .
+                  git add .
+                  git commit -m "Deploy to GitHub Pages"
+                  git push -f origin gh-pages
