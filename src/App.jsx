@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLibraries } from "./hooks/useLibraries";
+import GridItem from "./components/GridItem";
 import {
     UploadIcon,
     RefreshCwIcon,
@@ -33,6 +34,7 @@ function App() {
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const dragStart = useRef({ x: 0, y: 0 });
+    const lastDraggedIndexRef = useRef(null);
 
     // Refs
     const gridRef = useRef(null);
@@ -150,14 +152,70 @@ function App() {
         return () => window.removeEventListener("resize", updateScale);
     }, [libsLoaded, canvasWidth, canvasHeight]);
 
-    const handleUpload = (e) => {
+    const handleUpload = async (e) => {
         const files = Array.from(e.target.files);
-        const newPhotos = files.map((file) => ({
-            id: Math.random().toString(36).substring(2, 9) + "-" + Date.now(),
-            src: URL.createObjectURL(file),
-        }));
+        const newPhotos = await Promise.all(
+            files.map((file) => createPhotoObject(file)),
+        );
         setPhotos((prev) => [...prev, ...newPhotos]);
         e.target.value = null;
+    };
+
+    const createPhotoObject = (file) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const photoId =
+                        Math.random().toString(36).substring(2, 9) +
+                        "-" +
+                        Date.now();
+                    const originalUrl = URL.createObjectURL(file);
+                    const displayUrl = originalUrl;
+
+                    // Check if image is larger than 2x the display size (2000px)
+                    if (img.width > 2000 || img.height > 2000) {
+                        // Create compressed version for display
+                        const canvas = document.createElement("canvas");
+                        const ctx = canvas.getContext("2d");
+
+                        // Calculate scale to fit within 2000px
+                        const scale = Math.min(
+                            2000 / img.width,
+                            2000 / img.height,
+                        );
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        // Convert compressed canvas to blob and create URL
+                        canvas.toBlob(
+                            (blob) => {
+                                const compressedUrl = URL.createObjectURL(blob);
+                                resolve({
+                                    id: photoId,
+                                    src: compressedUrl, // Display URL (compressed)
+                                    originalSrc: originalUrl, // Original URL (for export)
+                                });
+                            },
+                            "image/jpeg",
+                            0.85,
+                        );
+                    } else {
+                        // Image is small enough, use original
+                        resolve({
+                            id: photoId,
+                            src: displayUrl,
+                            originalSrc: originalUrl,
+                        });
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
     };
 
     const handleShuffle = () => {
@@ -191,6 +249,7 @@ function App() {
 
     const handleDragStart = (e, index) => {
         setDraggedIndex(index);
+        lastDraggedIndexRef.current = index;
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", index);
     };
@@ -198,6 +257,10 @@ function App() {
     const handleDragOver = (e, index) => {
         e.preventDefault();
         if (draggedIndex === null || draggedIndex === index) return;
+
+        // Only update state if the target index has actually changed
+        // This prevents unnecessary state updates on every mousemove
+        if (lastDraggedIndexRef.current === index) return;
 
         setPhotos((prev) => {
             const updated = [...prev];
@@ -207,11 +270,14 @@ function App() {
             return updated;
         });
 
+        // Update the internal ref to track where we last re-ordered
+        lastDraggedIndexRef.current = index;
         setDraggedIndex(index);
     };
 
     const handleDragEnd = () => {
         setDraggedIndex(null);
+        lastDraggedIndexRef.current = null;
     };
 
     const handleExport = async () => {
@@ -221,6 +287,16 @@ function App() {
         const parentElement = captureAreaRef.current.parentElement;
         const originalTransform = parentElement.style.transform;
         parentElement.style.transform = "scale(1)";
+
+        // Temporarily swap all image sources to use originalSrc for export
+        const imageElements = captureAreaRef.current.querySelectorAll("img");
+        const originalSources = Array.from(imageElements).map((img) => img.src);
+        imageElements.forEach((img, index) => {
+            const photo = photos[index];
+            if (photo && photo.originalSrc) {
+                img.src = photo.originalSrc;
+            }
+        });
 
         await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -244,6 +320,10 @@ function App() {
         } catch (err) {
             console.error("Export Error:", err);
         } finally {
+            // Restore original display sources
+            imageElements.forEach((img, index) => {
+                img.src = originalSources[index];
+            });
             parentElement.style.transform = originalTransform;
             setIsExporting(false);
         }
@@ -267,6 +347,8 @@ function App() {
                         "-" +
                         i,
                     src: photoToDuplicate.src,
+                    originalSrc:
+                        photoToDuplicate.originalSrc || photoToDuplicate.src,
                 });
             }
 
@@ -332,28 +414,15 @@ function App() {
                                     style={{ width: `${BASE_WIDTH}px` }}
                                 >
                                     {photos.map((photo) => (
-                                        <div
+                                        <GridItem
                                             key={photo.id}
-                                            className="grid-item"
-                                            style={{
-                                                width: `${itemWidth}px`,
-                                                marginBottom: `${gap}px`,
-                                            }}
-                                        >
-                                            <div
-                                                className="bg-paper overflow-hidden"
-                                                style={{
-                                                    borderRadius: `${radius}px`,
-                                                    border: `${borderWeight}px solid ${borderColor}`,
-                                                }}
-                                            >
-                                                <img
-                                                    src={photo.src}
-                                                    alt=""
-                                                    className="w-full block pointer-events-none"
-                                                />
-                                            </div>
-                                        </div>
+                                            photo={photo}
+                                            itemWidth={itemWidth}
+                                            gap={gap}
+                                            radius={radius}
+                                            borderWeight={borderWeight}
+                                            borderColor={borderColor}
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -367,249 +436,264 @@ function App() {
 
             {/* Sidebar */}
             <aside className="sidebar">
-                <h1 className="text-[22px] font-extrabold uppercase tracking-tight font-display text-ink mb-0">
-                    Slide Studio
-                </h1>
-                <p className="text-[12px] mb-6 leading-tight text-ink-mute font-normal">
-                    Upload images to create custom masonry grids for your
-                    presentation.
-                </p>
+                <div className="sidebar-content">
+                    <h1 className="text-[22px] font-extrabold uppercase tracking-tight font-display text-ink mb-0">
+                        Slide Studio
+                    </h1>
+                    <p className="text-[12px] mb-6 leading-tight text-ink-mute font-normal">
+                        Upload images to create custom masonry grids for your
+                        presentation.
+                    </p>
 
-                <Section title="1. Add files" subtitle="JPG / PNG">
-                    <div className="flex gap-1 mb-1">
-                        <Btn
-                            variant="secondary"
-                            onClick={() =>
-                                document.getElementById("up").click()
-                            }
-                            className="flex-grow h-[36px] !py-0 bg-white"
-                        >
-                            <UploadIcon size={16} /> Choose files
-                        </Btn>
-                        {photos.length > 1 && (
-                            <div className="tooltip">
-                                <Btn
-                                    variant="secondary"
-                                    onClick={handleShuffle}
-                                    className="w-[44px] h-[36px] !px-0 !py-0 shrink-0 bg-white flex items-center justify-center"
-                                >
-                                    <ShuffleIcon size={16} />
-                                </Btn>
-                                <span className="tooltip-text">
-                                    Shuffle images
-                                </span>
-                            </div>
-                        )}
-                        {photos.length > 0 && (
-                            <div className="tooltip">
-                                <Btn
-                                    variant="secondary"
-                                    onClick={handleFill}
-                                    className="w-[44px] h-[36px] !px-0 !py-0 shrink-0 bg-white text-xs flex items-center justify-center"
-                                >
-                                    +10
-                                </Btn>
-                                <span className="tooltip-text">
-                                    Add 10 duplicates
-                                </span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Thumbnail manager */}
-                    {photos.length > 0 && (
-                        <div className="thumbnail-manager">
-                            <div className="grid grid-cols-5 gap-2 max-h-[108px] overflow-hidden p-0.5 pr-1.5">
-                                {photos.map((photo, index) => (
-                                    <div
-                                        key={photo.id}
-                                        draggable="true"
-                                        onDragStart={(e) =>
-                                            handleDragStart(e, index)
-                                        }
-                                        onDragOver={(e) =>
-                                            handleDragOver(e, index)
-                                        }
-                                        onDragEnd={handleDragEnd}
-                                        className="thumbnail-item"
-                                        data-dragged={draggedIndex === index}
+                    <Section title="1. Add files" subtitle="JPG / PNG">
+                        <div className="flex gap-1 mb-1">
+                            <Btn
+                                variant="secondary"
+                                onClick={() =>
+                                    document.getElementById("up").click()
+                                }
+                                className="flex-grow h-[36px] !py-0 bg-white"
+                            >
+                                <UploadIcon size={16} /> Choose files
+                            </Btn>
+                            {photos.length > 1 && (
+                                <div className="tooltip">
+                                    <Btn
+                                        variant="secondary"
+                                        onClick={handleShuffle}
+                                        className="w-[44px] h-[36px] !px-0 !py-0 shrink-0 bg-white flex items-center justify-center"
                                     >
-                                        <img
-                                            src={photo.src}
-                                            alt=""
-                                            className="w-full h-full object-cover pointer-events-none"
-                                        />
-                                        {/* Overlay Controls */}
-                                        <div className="thumbnail-overlay">
-                                            {/* Delete Button at top-right */}
-                                            <div className="flex justify-end">
-                                                <button
-                                                    onClick={() =>
-                                                        handleDelete(index)
-                                                    }
-                                                    className="thumbnail-btn delete-btn"
-                                                    title="Delete image"
-                                                >
-                                                    <TrashIcon size={12} />
-                                                </button>
-                                            </div>
+                                        <ShuffleIcon size={16} />
+                                    </Btn>
+                                    <span className="tooltip-text">
+                                        Shuffle images
+                                    </span>
+                                </div>
+                            )}
+                            {photos.length > 0 && (
+                                <div className="tooltip">
+                                    <Btn
+                                        variant="secondary"
+                                        onClick={handleFill}
+                                        className="w-[44px] h-[36px] !px-0 !py-0 shrink-0 bg-white text-xs flex items-center justify-center"
+                                    >
+                                        +10
+                                    </Btn>
+                                    <span className="tooltip-text">
+                                        Add 10 duplicates
+                                    </span>
+                                </div>
+                            )}
+                        </div>
 
-                                            {/* Reorder Buttons at bottom */}
-                                            <div className="flex justify-between w-full">
-                                                <button
-                                                    onClick={() =>
-                                                        handleMove(index, -1)
-                                                    }
-                                                    disabled={index === 0}
-                                                    className="thumbnail-btn"
-                                                    title="Move left"
-                                                >
-                                                    <ArrowLeftIcon size={12} />
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        handleMove(index, 1)
-                                                    }
-                                                    disabled={
-                                                        index ===
-                                                        photos.length - 1
-                                                    }
-                                                    className="thumbnail-btn"
-                                                    title="Move right"
-                                                >
-                                                    <ArrowRightIcon size={12} />
-                                                </button>
+                        {/* Thumbnail manager */}
+                        {photos.length > 0 && (
+                            <div className="thumbnail-manager">
+                                <div className="grid grid-cols-5 gap-2 max-h-[108px] overflow-hidden p-.25 pr-1">
+                                    {photos.map((photo, index) => (
+                                        <div
+                                            key={photo.id}
+                                            draggable="true"
+                                            onDragStart={(e) =>
+                                                handleDragStart(e, index)
+                                            }
+                                            onDragOver={(e) =>
+                                                handleDragOver(e, index)
+                                            }
+                                            onDragEnd={handleDragEnd}
+                                            className="thumbnail-item"
+                                            data-dragged={
+                                                draggedIndex === index
+                                            }
+                                        >
+                                            <img
+                                                src={photo.src}
+                                                alt=""
+                                                className="w-full h-full object-cover pointer-events-none"
+                                            />
+                                            {/* Overlay Controls */}
+                                            <div className="thumbnail-overlay">
+                                                {/* Delete Button at top-right */}
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        onClick={() =>
+                                                            handleDelete(index)
+                                                        }
+                                                        className="thumbnail-btn delete-btn"
+                                                        title="Delete image"
+                                                    >
+                                                        <TrashIcon size={12} />
+                                                    </button>
+                                                </div>
+
+                                                {/* Reorder Buttons at bottom */}
+                                                <div className="flex justify-between w-full">
+                                                    <button
+                                                        onClick={() =>
+                                                            handleMove(
+                                                                index,
+                                                                -1,
+                                                            )
+                                                        }
+                                                        disabled={index === 0}
+                                                        className="thumbnail-btn"
+                                                        title="Move left"
+                                                    >
+                                                        <ArrowLeftIcon
+                                                            size={12}
+                                                        />
+                                                    </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleMove(index, 1)
+                                                        }
+                                                        disabled={
+                                                            index ===
+                                                            photos.length - 1
+                                                        }
+                                                        className="thumbnail-btn"
+                                                        title="Move right"
+                                                    >
+                                                        <ArrowRightIcon
+                                                            size={12}
+                                                        />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <input
+                            type="file"
+                            id="up"
+                            multiple
+                            accept=".png, .jpg, .jpeg"
+                            onChange={handleUpload}
+                            className="hidden"
+                        />
+                    </Section>
+
+                    <Section title="2. Grid layout">
+                        <div className="grid grid-cols-2 gap-3 mb-2">
+                            <div>
+                                <Label>Columns</Label>
+                                <Input
+                                    type="number"
+                                    value={cols}
+                                    onChange={(e) =>
+                                        setCols(parseInt(e.target.value) || 1)
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <Label>Gap (px)</Label>
+                                <Input
+                                    type="number"
+                                    value={gap}
+                                    onChange={(e) =>
+                                        setGap(parseInt(e.target.value) || 0)
+                                    }
+                                />
                             </div>
                         </div>
-                    )}
-                    <input
-                        type="file"
-                        id="up"
-                        multiple
-                        accept=".png, .jpg, .jpeg"
-                        onChange={handleUpload}
-                        className="hidden"
-                    />
-                </Section>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label>Border radius</Label>
+                                <Input
+                                    type="number"
+                                    value={radius}
+                                    onChange={(e) =>
+                                        setRadius(parseInt(e.target.value) || 0)
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <Label>Border weight</Label>
+                                <Input
+                                    type="number"
+                                    value={borderWeight}
+                                    onChange={(e) =>
+                                        setBorderWeight(
+                                            parseInt(e.target.value) || 0,
+                                        )
+                                    }
+                                />
+                            </div>
+                        </div>
+                        <Slider
+                            label="Offset %"
+                            value={colYOffset}
+                            min={-100}
+                            max={100}
+                            onChange={setColYOffset}
+                            className="mt-3"
+                        />
+                    </Section>
 
-                <Section title="2. Grid layout">
-                    <div className="grid grid-cols-2 gap-3 mb-2">
-                        <div>
-                            <Label>Columns</Label>
-                            <Input
-                                type="number"
-                                value={cols}
-                                onChange={(e) =>
-                                    setCols(parseInt(e.target.value) || 1)
-                                }
-                            />
+                    <Section title="3. Adjust viewport">
+                        <div className="mb-3">
+                            <Label>Format</Label>
+                            <Select
+                                value={aspectRatio}
+                                onChange={(e) => setAspectRatio(e.target.value)}
+                            >
+                                <option value="16:9">Landscape (16:9)</option>
+                                <option value="9:16">Portrait (9:16)</option>
+                                <option value="1:1">Square (1:1)</option>
+                            </Select>
                         </div>
-                        <div>
-                            <Label>Gap (px)</Label>
-                            <Input
-                                type="number"
-                                value={gap}
-                                onChange={(e) =>
-                                    setGap(parseInt(e.target.value) || 0)
-                                }
-                            />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <Label>Border radius</Label>
-                            <Input
-                                type="number"
-                                value={radius}
-                                onChange={(e) =>
-                                    setRadius(parseInt(e.target.value) || 0)
-                                }
-                            />
-                        </div>
-                        <div>
-                            <Label>Border weight</Label>
-                            <Input
-                                type="number"
-                                value={borderWeight}
-                                onChange={(e) =>
-                                    setBorderWeight(
-                                        parseInt(e.target.value) || 0,
-                                    )
-                                }
-                            />
-                        </div>
-                    </div>
-                    <Slider
-                        label="Offset %"
-                        value={colYOffset}
-                        min={-100}
-                        max={100}
-                        onChange={setColYOffset}
-                        className="mt-3"
-                    />
-                </Section>
 
-                <Section title="3. Adjust viewport">
-                    <div className="mb-3">
-                        <Label>Format</Label>
-                        <Select
-                            value={aspectRatio}
-                            onChange={(e) => setAspectRatio(e.target.value)}
-                        >
-                            <option value="16:9">Landscape (16:9)</option>
-                            <option value="9:16">Portrait (9:16)</option>
-                            <option value="1:1">Square (1:1)</option>
-                        </Select>
-                    </div>
+                        <Slider
+                            label="Zoom %"
+                            value={zoom}
+                            min={10}
+                            max={400}
+                            onChange={setZoom}
+                        />
 
-                    <Slider
-                        label="Zoom %"
-                        value={zoom}
-                        min={10}
-                        max={400}
-                        onChange={setZoom}
-                    />
+                        <Slider
+                            label="Rotation °"
+                            value={rotation}
+                            min={-180}
+                            max={180}
+                            onChange={setRotation}
+                        />
+                    </Section>
 
-                    <Slider
-                        label="Rotation °"
-                        value={rotation}
-                        min={-180}
-                        max={180}
-                        onChange={setRotation}
-                    />
-                </Section>
-
-                {/* Appearance Section */}
-                <Section
-                    title="4. Appearance"
-                    hasDivider={false}
-                    className="mb-4"
-                >
-                    <div className="space-y-2">
-                        <div className="color-control">
-                            <Label className="!mb-0">Border color</Label>
-                            <input
-                                type="color"
-                                value={borderColor}
-                                onChange={(e) => setBorderColor(e.target.value)}
-                                className="w-6 h-6 cursor-pointer border-none p-0 outline-none"
-                            />
+                    {/* Appearance Section */}
+                    <Section
+                        title="4. Appearance"
+                        hasDivider={false}
+                        className="mb-0"
+                    >
+                        <div className="space-y-2">
+                            <div className="color-control">
+                                <Label className="!mb-0">Border color</Label>
+                                <input
+                                    type="color"
+                                    value={borderColor}
+                                    onChange={(e) =>
+                                        setBorderColor(e.target.value)
+                                    }
+                                    className="w-6 h-6 cursor-pointer border-none p-0 outline-none"
+                                />
+                            </div>
+                            <div className="color-control">
+                                <Label className="!mb-0">
+                                    Canvas background
+                                </Label>
+                                <input
+                                    type="color"
+                                    value={bgColor}
+                                    onChange={(e) => setBgColor(e.target.value)}
+                                    className="w-6 h-6 cursor-pointer border-none p-0 outline-none"
+                                />
+                            </div>
                         </div>
-                        <div className="color-control">
-                            <Label className="!mb-0">Canvas background</Label>
-                            <input
-                                type="color"
-                                value={bgColor}
-                                onChange={(e) => setBgColor(e.target.value)}
-                                className="w-6 h-6 cursor-pointer border-none p-0 outline-none"
-                            />
-                        </div>
-                    </div>
-                </Section>
+                    </Section>
+                </div>
 
                 {/* Action Area */}
                 <div className="action-area">

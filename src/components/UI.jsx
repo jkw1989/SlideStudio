@@ -84,7 +84,7 @@ export const Section = ({
     className = "",
 }) => (
     <div
-        className={`mb-8 pb-3 ${className} ${hasDivider ? "border-b border-line" : ""}`}
+        className={`mb-8 pb-1 ${className} ${hasDivider ? "border-b border-line" : ""}`}
     >
         <div className="flex items-baseline gap-1 mb-1">
             <span className="text-[12px] font-bold mb-0 uppercase tracking-tight font-display text-ink">

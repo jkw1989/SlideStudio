@@ -178,10 +178,7 @@
     /* --- Sidebar --- */
     .sidebar {
         width: 340px;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding: 1rem 1.5rem;
-        padding-bottom: 1.5rem;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
         flex-shrink: 0;
@@ -191,6 +188,15 @@
         height: 100vh;
         box-shadow: -6px 0 16px rgba(0, 0, 0, 0.15);
         box-sizing: border-box;
+    }
+
+    .sidebar-content {
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 1rem 1.5rem;
+        padding-bottom: 1.5rem;
+        flex: 1;
+        min-height: 0;
     }
 
     /* --- Thumbnail Manager --- */
@@ -268,22 +274,17 @@
 
     /* --- Action Area --- */
     .action-area {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
+        padding: 1rem 1.5rem;
         border-top: 1px solid var(--line);
-        border-left: 1.5px solid var(--ink);
-        position: fixed;
-        bottom: 0;
-        right: 0;
-        width: 340px;
+        flex-shrink: 0;
         background: var(--paper);
         z-index: 30;
         overflow: hidden;
-        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        gap: 0.75rem;
     }
 
     .reset-btn {
