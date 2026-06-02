@@ -277,7 +277,7 @@
         padding: 1rem 1.5rem;
         border-top: 1px solid var(--line);
         flex-shrink: 0;
-        background: var(--paper);
+        background: var(--bg);
         z-index: 30;
         overflow: hidden;
         display: flex;
